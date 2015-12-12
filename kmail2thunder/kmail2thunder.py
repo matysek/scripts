@@ -15,7 +15,6 @@ import email
 import getopt
 import mailbox
 import os
-import string
 import sys
 import traceback
 from stat import S_ISDIR, ST_MODE
@@ -73,21 +72,25 @@ def main(startdir, evodir):
 
     f = os.listdir(os.getcwd())
     for i in f:
-        if string.find(i, '.index') >= 0: continue
-        if i in noconvert: continue
+        # Skip .index files.
+        if i.endswith('.index'):
+            continue
+        # Skip ignored files.
+        if i in noconvert:
+            continue
 
         mode = os.stat(i)[ST_MODE]
         if S_ISDIR(mode):
-            if string.find(i, '.') >= 0:
-                if string.split(i, '.')[1] in f:
-                    chdirlist.append(string.split(i, '.')[1])
+            if i.find('.') >= 0:
+                if i.split('.')[1] in f:
+                    chdirlist.append(i.split('.')[1])
             else:
                 dirlist.append(i)
         else:
             filelist.append(i)
 
     for i in dirlist:
-        print('Processing folder: %s' % (i))
+        print('Processing folder: %s' % i)
         filename = os.path.join(startdir, i)
         destdir = os.path.join(evodir, i)
         process_maildir(filename, destdir)
@@ -97,13 +100,14 @@ def main(startdir, evodir):
 
         # Check that there is indeed something under the directory we
         # are about to recurse into
-        tmp = os.listdir(os.path.join(startdir, '.%s.directory' % (i)))
-        if not tmp: continue
+        tmp = os.listdir(os.path.join(startdir, '.%s.directory' % i))
+        if not tmp:
+            continue
 
-        print('Processing folders under .%s.directory' % (i))
-        tk = os.path.join(startdir, '.%s.directory' % (i))
+        print('Processing folders under .%s.directory' % i)
+        tk = os.path.join(startdir, '.%s.directory' % i)
         te = os.path.join(evodir, i)
-        te = te + '.sbd'
+        te += '.sbd'
         if not os.path.exists(te):
             os.mkdir(te)
         main(tk, te)
@@ -153,11 +157,13 @@ if __name__ == '__main__':
         sys.exit(0)
 
     try:
-        opt, args = getopt.getopt(sys.argv[1:], 'hk:t:i:', \
+        opt, args = getopt.getopt(sys.argv[1:], 'hk:t:i:',
                                   ['kmail=', 'evo=', 'ignore=', 'help'])
     except getopt.GetoptError:
         usage()
         sys.exit(0)
+
+    kmaildir = thunderdir = None
 
     for o, a in opt:
         if o in ('-h', '--help'):
@@ -166,22 +172,22 @@ if __name__ == '__main__':
         if o in ('-k', '--kmail'):
             kmaildir = a
         if o in ('-t', '--thunder'):
-            evodir = a
+            thunderdir = a
         if o in ('-i', '--ignore'):
-            noconvert = string.split(a, ',')
+            noconvert = a.split(',')
 
     # some basic sanity checks
     if not os.path.exists(kmaildir):
-        print('Seems like %s does\'nt exist' % (kmaildir))
+        print('Seems like %s does\'nt exist' % kmaildir)
         sys.exit(1)
-    if not os.path.exists(evodir):
-        print('Seems like %s does\'nt exist' % (evodir))
+    if not os.path.exists(thunderdir):
+        print('Seems like %s does\'nt exist' % thunderdir)
         sys.exit(1)
 
     # open the logfile 
     logfile = open(logfilename, 'w')
 
     # start the processing
-    main(os.path.abspath(kmaildir), os.path.abspath(evodir))
+    main(os.path.abspath(kmaildir), os.path.abspath(thunderdir))
 
     logfile.close()
