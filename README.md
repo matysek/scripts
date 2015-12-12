@@ -1,2 +1,1 @@
-# scripts
-My various utility scripts
+# My Various Utility Scripts
