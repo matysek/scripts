@@ -48,7 +48,7 @@ def process_maildir(maildir_srcdir, mbox_filename):
             with mailbox.Maildir(d, email.message_from_binary_file) as mdir:
                 # Iterate over messages.
                 n = len(mdir)
-                for index, item in enumerate(mdir.iteritems()):
+                for index, item in enumerate(mdir.items()):
                     key, msg = item
                     if index % 10 == 9:
                         print('Progress: msg %d of %d' % (index+1, n))
@@ -85,7 +85,7 @@ def main(startdir,evodir):
             filelist.append(i)
             
     for i in dirlist:
-        print 'Processing folder: %s' % (i)
+        print('Processing folder: %s' % (i))
         filename = os.path.join(startdir,i)
         destdir = os.path.join(evodir,i)
         process_maildir(filename,destdir)
@@ -98,7 +98,7 @@ def main(startdir,evodir):
         tmp = os.listdir( os.path.join(startdir,'.%s.directory' % (i)) )
         if not tmp: continue
         
-        print 'Processing folders under .%s.directory' % (i)
+        print('Processing folders under .%s.directory' % (i))
         tk = os.path.join(startdir,'.%s.directory' % (i))
         te = os.path.join(evodir,i)
         te = te+'.sbd'
@@ -109,7 +109,7 @@ def main(startdir,evodir):
     os.chdir(olddir)
 
 def usage():
-    print """
+    print("""
     Usage: kmail2evo.py [OPTIONS]
 
     Converts a KMail mail directory (in Maildir format) to the Evolution
@@ -136,7 +136,7 @@ def usage():
     will take some time to initially load and display the messages. This
     is because this script does not do any indexing. Hence Evolution
     must create indices the first time it loads the new folders.
-    """
+    """)
     
 
 if __name__ == '__main__':
@@ -172,10 +172,10 @@ if __name__ == '__main__':
 
     # some basic sanity checks
     if not os.path.exists(kmaildir):
-        print 'Seems like %s does\'nt exist' % (kmaildir)
+        print('Seems like %s does\'nt exist' % (kmaildir))
         sys.exit(1)
     if not os.path.exists(evodir):
-        print 'Seems like %s does\'nt exist' % (evodir)
+        print('Seems like %s does\'nt exist' % (evodir))
         sys.exit(1)
         
     # open the logfile 
