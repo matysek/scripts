@@ -8,84 +8,56 @@ Convert emails from Kmail/Kontact format to Thunderbird format.
 Original version downloaded from:
 http://dcwww.fys.dtu.dk/~schiotz/comp/kmail2thunder.py
 
-Rajarshi Guha, April 2003
-<rajarshi@presidency.com> <http://jijo.cjb.net>
-
-Updated by David Fenyes - voids adding the 'From' and
-'Date' portions of the parsed message if they're not strings
+Martin Zibricky, December 2015
 """
 
-import os,sys,string,email,email.Parser,StringIO,getopt
-from stat import *
-
-localxml = """<?xml version="1.0"?>
-<folderinfo>
-  <folder type="mbox" name="mbox" index="1"/>
-</folderinfo>
-"""
-folderxml = """<?xml version="1.0"?>
-<efolder>
-  <type>mail</type>
-  <description></description>
-</efolder>
-"""
+import os,sys,string,email,getopt
+import mailbox
+import traceback
+#from stat import *
 
 global logfile
 global logfilename
 global noconvert
 
-def process_maildir(maildir,destdir):
-    
-    # Make the output evo dir and evo mbox file
+
+def process_maildir(maildir_srcdir, mbox_filename):
+    """
+    Process all emails in the maildir subdirectories 'cur' and 'new'.
+
+    :param maildir_srcdir: Path to maildir directory containing 'cur' and 'new'
+    :param mbox_filename: Filename
+    """
+    print('Creating mbox file:', mbox_filename)
+
+    # Create directory where messages from subdirectories will be put.
+    # Thunderbird file format has this structure:
+    #   mbox_filename    # File with messages in MBOX format.
+    #   mbox_filename.sbd    # Directory with MBOX files for subdirectories.
+    mbox_subdir = mbox_filename + '.sbd'
     try:
-        os.mkdir(destdir)
+        os.makedirs(mbox_subdir)
     except OSError:
-        print "Couldn't create directory"+destdir
+        print("Couldn't create directory:", mbox_subdir)
 
-    assert destdir[-4:] == ".sbd"
-    print "Creating mbox file", destdir[:-4]
-    mbox = open(destdir[:-4],'w')
-        
-    # process the KMail maildir
-    maildir = os.path.join(maildir,'cur')
-    for f in os.listdir(maildir):
+    # Process one KMail maildir directory.
+    with mailbox.mbox(mbox_filename) as mbox:
+        # Messages are usually found in 'cur' and 'new' subdirectories.
+        for subdir in ('cur', 'new'):
+            d = os.path.join(maildir_srcdir, subdir)
+            with mailbox.Maildir(d, email.message_from_binary_file) as mdir:
+                # Iterate over messages.
+                n = len(mdir)
+                for index, item in enumerate(mdir.iteritems()):
+                    key, msg = item
+                    if index % 10 == 9:
+                        print('Progress: msg %d of %d' % (index+1, n))
+                    try:
+                        mbox.add(msg)
+                    except Exception:
+                        print('Error while processing msg with key:', key)
+                        traceback.print_exc()
 
-        tmp = os.path.join(maildir,f)
-
-        fp = open(tmp,'r')
-        p = email.Parser.Parser()
-        try:
-            msg = p.parse(fp)
-        except:
-            print ' ** Error processing a message. Logged to mail.log'
-            logfile.write(tmp+'\n')
-
-        fp.close()
-        firstline = 'From '
-        if type(msg['From']) == type(''):
-            firstline = firstline+msg['From']
-        if type(msg['Date']) == type(''):
-            firstline = firstline+msg['Date']
-
-        tmp = StringIO.StringIO()
-        tmp.write(msg)
-        tmp = tmp.getvalue()
-        tmp = firstline+tmp[string.find(tmp,'\n')+1:]
-        mbox.write(tmp)
-
-    mbox.close()    
-
-def process_mbox(filename,destdir):
-
-    try:
-        os.mkdir(destdir)
-    except OSError:
-        print "Couldn't create new directory"+destdir
-        
-    assert destdir[-4:] == ".sbd"
-    destfile = destdir[:-4]
-    
-    os.system('cp "%s" "%s"' % (filename,destfile))
 
 def main(startdir,evodir):
     
@@ -112,20 +84,13 @@ def main(startdir,evodir):
         else:
             filelist.append(i)
             
-    # Process all the single files
-    for i in filelist:
-        print 'Processing mbox: %s' % (i)
-        filename = os.path.join(startdir,i)
-        destdir = os.path.join(evodir,i)
-        process_mbox(filename,destdir+".sbd")
-
     for i in dirlist:
         print 'Processing folder: %s' % (i)
         filename = os.path.join(startdir,i)
         destdir = os.path.join(evodir,i)
-        process_maildir(filename,destdir+".sbd")
+        process_maildir(filename,destdir)
     
-    # Now we need to recurse into the tree folders
+    # Now we need to recurse into the tree folders.
     for i in chdirlist:
 
         # Check that there is indeed something under the directory we
@@ -208,10 +173,10 @@ if __name__ == '__main__':
     # some basic sanity checks
     if not os.path.exists(kmaildir):
         print 'Seems like %s does\'nt exist' % (kmaildir)
-        sys.exit(0)
+        sys.exit(1)
     if not os.path.exists(evodir):
         print 'Seems like %s does\'nt exist' % (evodir)
-        sys.exit(0)
+        sys.exit(1)
         
     # open the logfile 
     logfile = open(logfilename,'w')
@@ -220,7 +185,3 @@ if __name__ == '__main__':
     main(os.path.abspath(kmaildir),os.path.abspath(evodir))
 
     logfile.close()
-
-
-
-    
