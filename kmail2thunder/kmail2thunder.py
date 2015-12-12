@@ -46,24 +46,20 @@ def process_maildir(maildir_srcdir, mbox_filename):
 
     # Process one KMail maildir directory.
     mbox = mailbox.mbox(mbox_filename)
-    # Messages are usually found in 'cur' and 'new' subdirectories.
-    for subdir in ('cur', 'new'):
-        d = os.path.join(maildir_srcdir, subdir)
-        mdir = mailbox.Maildir(d, email.message_from_binary_file)
-        # Iterate over messages.
-        n = len(mdir)
-        for index, item in enumerate(mdir.items()):
-            key, msg = item
-            if index % 10 == 9:
-                print('Progress: msg %d of %d' % (index + 1, n))
-            try:
-                mbox.add(msg)
-            except Exception:
-                print('Error while processing msg with key:', key)
-                traceback.print_exc()
-        # Close maildir.
-        mdir.close()
-    # Close mbox.
+    mdir = mailbox.Maildir(maildir_srcdir, email.message_from_binary_file)
+    # Iterate over messages.
+    n = len(mdir)
+    for index, item in enumerate(mdir.items()):
+        key, msg = item
+        if index % 10 == 9:
+            print('Progress: msg %d of %d' % (index + 1, n))
+        try:
+            mbox.add(msg)
+        except Exception:
+            print('Error while processing msg with key:', key)
+            traceback.print_exc()
+    # Close maildir and mbox.
+    mdir.close()
     mbox.close()
 
 
