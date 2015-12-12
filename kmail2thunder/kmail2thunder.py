@@ -31,6 +31,7 @@ def process_maildir(maildir_srcdir, mbox_filename):
     :param maildir_srcdir: Path to maildir directory containing 'cur' and 'new'
     :param mbox_filename: Filename
     """
+    print('DEBUG:', repr(maildir_srcdir), repr(mbox_filename))
     print('Creating mbox file:', mbox_filename)
 
     # Create directory where messages from subdirectories will be put.
@@ -44,22 +45,26 @@ def process_maildir(maildir_srcdir, mbox_filename):
         print("Couldn't create directory:", mbox_subdir)
 
     # Process one KMail maildir directory.
-    with mailbox.mbox(mbox_filename) as mbox:
-        # Messages are usually found in 'cur' and 'new' subdirectories.
-        for subdir in ('cur', 'new'):
-            d = os.path.join(maildir_srcdir, subdir)
-            with mailbox.Maildir(d, email.message_from_binary_file) as mdir:
-                # Iterate over messages.
-                n = len(mdir)
-                for index, item in enumerate(mdir.items()):
-                    key, msg = item
-                    if index % 10 == 9:
-                        print('Progress: msg %d of %d' % (index + 1, n))
-                    try:
-                        mbox.add(msg)
-                    except Exception:
-                        print('Error while processing msg with key:', key)
-                        traceback.print_exc()
+    mbox = mailbox.mbox(mbox_filename)
+    # Messages are usually found in 'cur' and 'new' subdirectories.
+    for subdir in ('cur', 'new'):
+        d = os.path.join(maildir_srcdir, subdir)
+        mdir = mailbox.Maildir(d, email.message_from_binary_file)
+        # Iterate over messages.
+        n = len(mdir)
+        for index, item in enumerate(mdir.items()):
+            key, msg = item
+            if index % 10 == 9:
+                print('Progress: msg %d of %d' % (index + 1, n))
+            try:
+                mbox.add(msg)
+            except Exception:
+                print('Error while processing msg with key:', key)
+                traceback.print_exc()
+        # Close maildir.
+        mdir.close()
+    # Close mbox.
+    mbox.close()
 
 
 def main(startdir, evodir):
@@ -117,9 +122,9 @@ def main(startdir, evodir):
 
 def usage():
     print("""
-    Usage: kmail2evo.py [OPTIONS]
+    Usage: kmail2thunder.py [OPTIONS]
 
-    Converts a KMail mail directory (in Maildir format) to the Evolution
+    Converts a KMail mail directory (in Maildir format) to the Thunderbird
     mbox fomat, maintaining folder structure. You can specify folders to
     ignore if required. The possible options are:
 
@@ -147,12 +152,15 @@ def usage():
 
 
 if __name__ == '__main__':
+    if sys.version_info[:2] < (3,2):
+        print( 'This program needs at least Python 3.2 to work' )
+        sys.exit(0)
 
     logfile = None
     logfilename = 'mail.log'
     noconvert = ['inbox', 'trash', 'drafts', 'sent-mail', 'outbox']
 
-    if len(sys.argv) == 1:
+    if len(sys.argv) < 3:
         usage()
         sys.exit(0)
 
@@ -170,9 +178,9 @@ if __name__ == '__main__':
             usage()
             sys.exit(0)
         if o in ('-k', '--kmail'):
-            kmaildir = a
+            kmaildir = os.path.abspath(a)
         if o in ('-t', '--thunder'):
-            thunderdir = a
+            thunderdir = os.path.abspath(a)
         if o in ('-i', '--ignore'):
             noconvert = a.split(',')
 
@@ -182,7 +190,8 @@ if __name__ == '__main__':
         sys.exit(1)
     if not os.path.exists(thunderdir):
         print('Seems like %s does\'nt exist' % thunderdir)
-        sys.exit(1)
+        print('Creating it...')
+        os.makedirs(thunderdir)
 
     # open the logfile 
     logfile = open(logfilename, 'w')
