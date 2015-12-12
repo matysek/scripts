@@ -11,10 +11,14 @@ http://dcwww.fys.dtu.dk/~schiotz/comp/kmail2thunder.py
 Martin Zibricky, December 2015
 """
 
-import os,sys,string,email,getopt
+import email
+import getopt
 import mailbox
+import os
+import string
+import sys
 import traceback
-#from stat import *
+from stat import S_ISDIR, ST_MODE
 
 global logfile
 global logfilename
@@ -51,7 +55,7 @@ def process_maildir(maildir_srcdir, mbox_filename):
                 for index, item in enumerate(mdir.items()):
                     key, msg = item
                     if index % 10 == 9:
-                        print('Progress: msg %d of %d' % (index+1, n))
+                        print('Progress: msg %d of %d' % (index + 1, n))
                     try:
                         mbox.add(msg)
                     except Exception:
@@ -59,8 +63,7 @@ def process_maildir(maildir_srcdir, mbox_filename):
                         traceback.print_exc()
 
 
-def main(startdir,evodir):
-    
+def main(startdir, evodir):
     olddir = os.getcwd()
     os.chdir(startdir)
 
@@ -70,43 +73,43 @@ def main(startdir,evodir):
 
     f = os.listdir(os.getcwd())
     for i in f:
-        if string.find(i,'.index') >= 0: continue
+        if string.find(i, '.index') >= 0: continue
         if i in noconvert: continue
-        
 
         mode = os.stat(i)[ST_MODE]
         if S_ISDIR(mode):
-            if string.find(i,'.') >= 0:
-                if string.split(i,'.')[1] in f: 
-                    chdirlist.append(string.split(i,'.')[1])
+            if string.find(i, '.') >= 0:
+                if string.split(i, '.')[1] in f:
+                    chdirlist.append(string.split(i, '.')[1])
             else:
                 dirlist.append(i)
         else:
             filelist.append(i)
-            
+
     for i in dirlist:
         print('Processing folder: %s' % (i))
-        filename = os.path.join(startdir,i)
-        destdir = os.path.join(evodir,i)
-        process_maildir(filename,destdir)
-    
+        filename = os.path.join(startdir, i)
+        destdir = os.path.join(evodir, i)
+        process_maildir(filename, destdir)
+
     # Now we need to recurse into the tree folders.
     for i in chdirlist:
 
         # Check that there is indeed something under the directory we
         # are about to recurse into
-        tmp = os.listdir( os.path.join(startdir,'.%s.directory' % (i)) )
+        tmp = os.listdir(os.path.join(startdir, '.%s.directory' % (i)))
         if not tmp: continue
-        
+
         print('Processing folders under .%s.directory' % (i))
-        tk = os.path.join(startdir,'.%s.directory' % (i))
-        te = os.path.join(evodir,i)
-        te = te+'.sbd'
+        tk = os.path.join(startdir, '.%s.directory' % (i))
+        te = os.path.join(evodir, i)
+        te = te + '.sbd'
         if not os.path.exists(te):
             os.mkdir(te)
-        main(tk,te)
+        main(tk, te)
 
     os.chdir(olddir)
+
 
 def usage():
     print("""
@@ -116,12 +119,12 @@ def usage():
     mbox fomat, maintaining folder structure. You can specify folders to
     ignore if required. The possible options are:
 
-        -h,--help   This message
-        -k,--kmail  The path to the KMail directory (default is ~/Mail)
-        -e,--evo    The path to the local folder directory of the
-                    Evolution mail store (default is ~/evolution/local) 
-        -i,--ignore A comma separated list of folders to ignore (place
-                    the list in quotes)
+        -h,--help    This message
+        -k,--kmail   The path to the KMail directory
+        -t,--thunder The path to the local folder directory of the
+                     Thunderbird mail store
+        -i,--ignore  A comma separated list of folders to ignore (place
+                     the list in quotes)
 
     By default, KMails inbox, outbox, sent-mail and drafts folders are
     ignored. To make sure that everything gets converted, specify '' to
@@ -137,38 +140,35 @@ def usage():
     is because this script does not do any indexing. Hence Evolution
     must create indices the first time it loads the new folders.
     """)
-    
+
 
 if __name__ == '__main__':
 
     logfile = None
     logfilename = 'mail.log'
-    noconvert = ['inbox','trash','drafts','sent-mail','outbox']
-    kmaildir = os.environ.get('HOME')+'/Mail'
-    #evodir = os.environ.get('HOME')+'/.evolution/local'
-    evodir = os.environ.get('HOME')+'/tmpmail'
+    noconvert = ['inbox', 'trash', 'drafts', 'sent-mail', 'outbox']
 
     if len(sys.argv) == 1:
         usage()
         sys.exit(0)
-        
+
     try:
-        opt,args = getopt.getopt(sys.argv[1:], 'hk:e:i:',\
-        ['kmail=','evo=','ignore=','help'])
+        opt, args = getopt.getopt(sys.argv[1:], 'hk:t:i:', \
+                                  ['kmail=', 'evo=', 'ignore=', 'help'])
     except getopt.GetoptError:
         usage()
         sys.exit(0)
 
-    for o,a in opt:
-        if o in ('-h','--help'):
+    for o, a in opt:
+        if o in ('-h', '--help'):
             usage()
             sys.exit(0)
-        if o in ('-k','--kmail'):
+        if o in ('-k', '--kmail'):
             kmaildir = a
-        if o in ('-e','--evo'):
+        if o in ('-t', '--thunder'):
             evodir = a
-        if o in ('-i','--ignore'):
-            noconvert = string.split(a,',')
+        if o in ('-i', '--ignore'):
+            noconvert = string.split(a, ',')
 
     # some basic sanity checks
     if not os.path.exists(kmaildir):
@@ -177,11 +177,11 @@ if __name__ == '__main__':
     if not os.path.exists(evodir):
         print('Seems like %s does\'nt exist' % (evodir))
         sys.exit(1)
-        
+
     # open the logfile 
-    logfile = open(logfilename,'w')
+    logfile = open(logfilename, 'w')
 
     # start the processing
-    main(os.path.abspath(kmaildir),os.path.abspath(evodir))
+    main(os.path.abspath(kmaildir), os.path.abspath(evodir))
 
     logfile.close()
