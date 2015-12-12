@@ -5,6 +5,9 @@
 Convert emails from Kmail/Kontact format to Thunderbird format.
 (From Maildir format to MBOX format)
 
+Kmail/Kontact emails are usually placed in path:
+  ~/.local/share/local-mail
+
 Original version downloaded from:
 http://dcwww.fys.dtu.dk/~schiotz/comp/kmail2thunder.py
 
@@ -31,7 +34,7 @@ def process_maildir(maildir_srcdir, mbox_filename):
     :param maildir_srcdir: Path to maildir directory containing 'cur' and 'new'
     :param mbox_filename: Filename
     """
-    print('DEBUG:', repr(maildir_srcdir), repr(mbox_filename))
+    #print('DEBUG:', repr(maildir_srcdir), repr(mbox_filename))
     print('Creating mbox file:', mbox_filename)
 
     # Create directory where messages from subdirectories will be put.
